@@ -2,7 +2,7 @@
 
 CulinaryOS is a high-performance, premium IoT kitchen platform that bridges the gap between physical grocery management and intelligent meal planning. It’s designed to function as a Smart Home OS, not just a list app, offering AI-powered inventory management, recipe generation, and smart cooking guidance.
 
-**✨ Features**
+## ✨ Features
 Dashboard (Command Center)
 
 Snapshot of your kitchen’s health
@@ -53,7 +53,7 @@ Auto-Grocery List: Low-stock items automatically added using Supabase triggers
 
 Step-by-Step Execution: Recipe Focus Mode with progress bars and timers for each step
 
-**🛠 Tech Stack:**
+## 🛠 Tech Stack:
 
 Frontend: React 19 + TypeScript, Tailwind CSS, Glassmorphism UI
 
@@ -65,7 +65,7 @@ Intelligence Engine: Google Gemini API (Gemini 3 Flash & Gemini 2.5 Flash)
 
 PWA Support: Service Worker + Manifest for installable web app
 
-**📌 Core Terminology:**
+## 📌 Core Terminology:
 
 Registry: Master database of physical food items
 
@@ -79,7 +79,7 @@ Biometric Impact: Health Score & nutritional breakdown
 
 Grounding: Linking AI outputs to real-world data (prices, locations)
 
-**💡 Conclusion:**
+## 💡 Conclusion:
 
 CulinaryOS is more than a kitchen app—it’s an intelligent assistant that understands the value, location, and expiration of every item in your kitchen, helping you cook smarter, reduce waste, and plan meals efficiently.
 

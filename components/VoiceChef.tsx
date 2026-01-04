@@ -19,9 +19,8 @@ export const VoiceChef: React.FC<VoiceChefProps> = memo(({ inventory }) => {
   const outputAudioContextRef = useRef<AudioContext | null>(null);
   const nextStartTimeRef = useRef<number>(0);
   const sourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
-  const sessionRef = useRef<any>(null);
+  const sessionPromiseRef = useRef<Promise<any> | null>(null);
 
-  // Helper functions for audio encoding/decoding
   function decode(base64: string) {
     const binaryString = atob(base64);
     const bytes = new Uint8Array(binaryString.length);
@@ -52,10 +51,17 @@ export const VoiceChef: React.FC<VoiceChefProps> = memo(({ inventory }) => {
     return buffer;
   }
 
-  const stopSession = useCallback(() => {
+  const stopSession = useCallback(async () => {
     setIsActive(false);
     setStatus('idle');
     setTranscript('');
+    
+    if (sessionPromiseRef.current) {
+      const session = await sessionPromiseRef.current;
+      session.close();
+      sessionPromiseRef.current = null;
+    }
+
     if (audioContextRef.current) audioContextRef.current.close();
     if (outputAudioContextRef.current) outputAudioContextRef.current.close();
     sourcesRef.current.forEach(s => { try { s.stop(); } catch(e) {} });
@@ -64,7 +70,6 @@ export const VoiceChef: React.FC<VoiceChefProps> = memo(({ inventory }) => {
 
   const startSession = async () => {
     setIsConnecting(true);
-    setStatus('listening');
     
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -82,27 +87,36 @@ export const VoiceChef: React.FC<VoiceChefProps> = memo(({ inventory }) => {
           onopen: () => {
             setIsConnecting(false);
             setIsActive(true);
+            setStatus('listening');
+            
             const source = inputCtx.createMediaStreamSource(stream);
             const scriptProcessor = inputCtx.createScriptProcessor(4096, 1, 1);
+            
             scriptProcessor.onaudioprocess = (e) => {
               const inputData = e.inputBuffer.getChannelData(0);
               const int16 = new Int16Array(inputData.length);
               for (let i = 0; i < inputData.length; i++) int16[i] = inputData[i] * 32768;
+              
               const pcmBlob = {
                 data: encode(new Uint8Array(int16.buffer)),
                 mimeType: 'audio/pcm;rate=16000',
               };
-              sessionPromise.then(session => session.sendRealtimeInput({ media: pcmBlob }));
+              
+              // CRITICAL: Only send input after session connects
+              sessionPromise.then(session => {
+                session.sendRealtimeInput({ media: pcmBlob });
+              });
             };
+            
             source.connect(scriptProcessor);
             scriptProcessor.connect(inputCtx.destination);
           },
           onmessage: async (message: LiveServerMessage) => {
-            if (message.serverContent?.modelTurn?.parts[0]?.inlineData?.data) {
+            const audioData = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
+            if (audioData) {
               setStatus('speaking');
-              const base64 = message.serverContent.modelTurn.parts[0].inlineData.data;
               nextStartTimeRef.current = Math.max(nextStartTimeRef.current, outputCtx.currentTime);
-              const buffer = await decodeAudioData(decode(base64), outputCtx, 24000, 1);
+              const buffer = await decodeAudioData(decode(audioData), outputCtx, 24000, 1);
               const source = outputCtx.createBufferSource();
               source.buffer = buffer;
               source.connect(outputCtx.destination);
@@ -121,7 +135,7 @@ export const VoiceChef: React.FC<VoiceChefProps> = memo(({ inventory }) => {
               setStatus('listening');
             }
             if (message.serverContent?.outputTranscription) {
-              setTranscript(prev => (prev + ' ' + message.serverContent?.outputTranscription?.text).slice(-100));
+              setTranscript(message.serverContent.outputTranscription.text);
             }
           },
           onclose: () => stopSession(),
@@ -130,21 +144,15 @@ export const VoiceChef: React.FC<VoiceChefProps> = memo(({ inventory }) => {
         config: {
           responseModalities: [Modality.AUDIO],
           speechConfig: { 
-            voiceConfig: { 
-              prebuiltVoiceConfig: { voiceName: 'Kore' }
-            } 
+            voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } 
           },
-          systemInstruction: `You are the Female Voice Assistant for CulinaryOS. You are a helpful, encouraging, and intelligent kitchen guide. 
-          Current Inventory: ${inventoryContext}.
-          Your primary tasks:
-          1. Provide real-time step-by-step recipe guidance.
-          2. Answer questions about ingredient substitutions and cooking techniques.
-          3. Inform the user about items nearing expiry.
-          Keep your responses concise, friendly, and focused on cooking safety and efficiency.`,
+          systemInstruction: `You are the Culinary Assistant. You have access to these items: ${inventoryContext}. 
+          Help with recipes, inventory tracking, and expiration warnings. 
+          Respond in a warm, professional tone. If asked for global recipes, you can use your internal knowledge.`,
           outputAudioTranscription: {},
         }
       });
-      sessionRef.current = sessionPromise;
+      sessionPromiseRef.current = sessionPromise;
     } catch (err) {
       console.error("Failed to start voice session:", err);
       setIsConnecting(false);
@@ -163,35 +171,32 @@ export const VoiceChef: React.FC<VoiceChefProps> = memo(({ inventory }) => {
                     <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
                   </svg>
                 </div>
-                {status !== 'idle' && (
-                  <div className="absolute -inset-1 border-2 border-emerald-400 rounded-full animate-ping opacity-20"></div>
-                )}
               </div>
               <div>
-                <p className="text-sm font-bold text-white uppercase tracking-tight">AI Voice Assistant</p>
+                <p className="text-sm font-bold text-white uppercase tracking-tight">Chef AI Voice</p>
                 <Badge variant="success" className="text-[8px] py-0 px-1 bg-emerald-500/20 text-emerald-400 border-none">{status.toUpperCase()}</Badge>
               </div>
             </div>
-            <button onClick={stopSession} className="text-slate-500 hover:text-white transition-colors" aria-label="Close Voice Assistant">
+            <button onClick={stopSession} className="text-slate-500 hover:text-white transition-colors" aria-label="End Voice Session">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </button>
           </div>
           
-          <div className="h-24 overflow-hidden relative">
+          <div className="h-20 overflow-hidden relative">
              <div className="flex gap-1 items-end justify-center h-full mb-2">
-                {[...Array(12)].map((_, i) => (
+                {[...Array(8)].map((_, i) => (
                   <div 
                     key={i} 
-                    className={`w-1 bg-emerald-500 rounded-full transition-all duration-150 ${status === 'speaking' ? 'animate-bounce' : 'h-2 opacity-30'}`}
+                    className={`w-1.5 bg-emerald-500 rounded-full transition-all duration-150 ${status === 'speaking' ? 'animate-bounce' : 'h-2 opacity-30'}`}
                     style={{ 
-                      height: status === 'speaking' ? `${Math.random() * 40 + 10}px` : '8px',
-                      animationDelay: `${i * 0.1}s` 
+                      height: status === 'speaking' ? `${Math.random() * 30 + 10}px` : '6px',
+                      animationDelay: `${i * 0.15}s` 
                     }}
                   />
                 ))}
              </div>
              <p className="text-[10px] text-slate-400 font-medium italic text-center line-clamp-2">
-               {transcript || "Ask for a recipe or inventory status..."}
+               {transcript || "Speak to begin culinary processing..."}
              </p>
           </div>
         </Card>
@@ -199,8 +204,8 @@ export const VoiceChef: React.FC<VoiceChefProps> = memo(({ inventory }) => {
         <button 
           onClick={startSession}
           disabled={isConnecting}
-          aria-label="Start Gemini AI Voice Assistant"
-          className="w-18 h-18 bg-[#0f172a] text-emerald-500 border border-emerald-500/30 rounded-[2rem] flex items-center justify-center shadow-2xl hover:scale-110 hover:rotate-3 transition-all duration-300 ring-8 ring-emerald-500/10 group overflow-hidden"
+          aria-label="Start Voice Assistant"
+          className="w-18 h-18 bg-[#0f172a] text-emerald-500 border border-emerald-500/30 rounded-[2rem] flex items-center justify-center shadow-2xl hover:scale-110 hover:rotate-3 transition-all duration-300 ring-8 ring-emerald-500/10 group"
         >
           {isConnecting ? (
             <svg className="animate-spin h-6 w-6" viewBox="0 0 24 24">
@@ -208,12 +213,9 @@ export const VoiceChef: React.FC<VoiceChefProps> = memo(({ inventory }) => {
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
             </svg>
           ) : (
-            <>
-              <div className="absolute inset-0 bg-emerald-400/10 rounded-[2rem] animate-ping group-hover:hidden"></div>
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
-              </svg>
-            </>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
+            </svg>
           )}
         </button>
       )}

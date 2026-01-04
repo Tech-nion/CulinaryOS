@@ -53,7 +53,8 @@ export interface Recipe {
   matchPercentage: number;
   calories: number;
   healthScore: number;
-  estimatedPrice?: string;
+  region?: string;
+  originDescription?: string;
   nutrition: {
     protein: string;
     carbs: string;
@@ -70,19 +71,19 @@ export interface GroceryItem {
   checked: boolean;
 }
 
-export interface KitchenStats {
-  totalItems: number;
-  expiringSoon: number;
-  lowStock: number;
-  inventoryValue: string;
-}
-
 export interface Mart {
   name: string;
   address: string;
   contact?: string;
   uri: string;
   distance?: string;
+}
+
+// Added KitchenStats interface used for the kitchen dashboard overview
+export interface KitchenStats {
+  totalItems: number;
+  expiringSoon: number;
+  lowStock: number;
 }
 
 export type OccasionType = 'Daily' | 'Weekend' | 'Party' | 'Festive';

@@ -1,0 +1,8 @@
+{
+  "name": "Copy of CulinaryOS - Smart Kitchen Hub",
+  "description": "A premium IoT kitchen inventory and recipe platform with a fresh, modern aesthetic, real-time tracking, and AI-powered meal suggestions.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}

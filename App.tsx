@@ -7,6 +7,7 @@ import { RecipeSuggestions } from './components/RecipeSuggestions';
 import { GroceryList } from './components/GroceryList';
 import QuickActions from './components/QuickActions';
 import AIChat from './components/AIChat';
+import { VoiceChef } from './components/VoiceChef';
 import FullStock from './components/FullStock';
 import { Auth } from './components/Auth';
 import { ProfileView } from './components/ProfileView';
@@ -14,6 +15,7 @@ import { RecipeInstructions } from './components/RecipeInstructions';
 import { UserGuide } from './components/UserGuide';
 import { ManualAdd } from './components/ManualAdd';
 import { Scanner } from './components/Scanner';
+import { NutritionRequirements } from './components/NutritionRequirements';
 import { Badge } from './components/ui/Badge';
 import { Card } from './components/ui/Card';
 import { Button } from './components/ui/Button';
@@ -21,18 +23,6 @@ import { Toast } from './components/ui/Toast';
 import { INITIAL_INVENTORY, INITIAL_GROCERY_LIST } from './mockData';
 import { InventoryItem, GroceryItem, KitchenStats, Recipe, Profile, ViewState, Category } from './types';
 import { supabase } from './lib/supabase';
-
-// Estimated values per unit for "Stock Wealth" index
-const UNIT_VALUATIONS: Record<Category, number> = {
-  [Category.PRODUCE]: 5.20,
-  [Category.DAIRY]: 4.50,
-  [Category.PROTEIN]: 18.75,
-  [Category.PANTRY]: 9.30,
-  [Category.BAKERY]: 3.80,
-  [Category.BEVERAGES]: 6.20,
-  [Category.SPICES]: 14.50,
-  [Category.MEAT]: 24.50
-};
 
 const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
@@ -125,27 +115,34 @@ const App: React.FC = () => {
     }).length;
 
     const lowStock = inventory.filter(item => item.quantity <= item.minThreshold).length;
-    const totalValue = inventory.reduce((sum, item) => sum + (item.quantity * (UNIT_VALUATIONS[item.category] || 5)), 0);
-    
-    // Wealth Index Calculation (0-100)
-    const targetQtyTotal = inventory.reduce((sum, i) => sum + i.targetQuantity, 0) || 1;
-    const currentQtyTotal = inventory.reduce((sum, i) => sum + i.quantity, 0);
-    const wealthScore = Math.min(100, Math.round((currentQtyTotal / targetQtyTotal) * 100));
-
-    let wealthStatus = "DEPLETED";
-    if (wealthScore > 85) wealthStatus = "SURPLUS ACTIVE";
-    else if (wealthScore > 50) wealthStatus = "OPTIMIZED STOCK";
-    else if (wealthScore > 20) wealthStatus = "MODERATE STOCK";
 
     return {
       totalItems: inventory.length,
       expiringSoon,
       lowStock,
-      inventoryValue: `$${totalValue.toFixed(2)}`,
-      wealthScore,
-      wealthStatus
     };
   }, [inventory]);
+
+  const addGroceryItem = async (name: string, quantity: number, unit: string) => {
+    const newItem: GroceryItem = {
+      id: Math.random().toString(36).substr(2, 9),
+      name,
+      quantity,
+      unit,
+      checked: false
+    };
+    setGroceryList(prev => [newItem, ...prev]);
+    if (!isDemo && session && isOnline) {
+      await supabase.from('grocery_items').insert({
+        user_id: session.user.id,
+        name: newItem.name,
+        quantity: newItem.quantity,
+        unit: newItem.unit,
+        checked: false
+      });
+    }
+    showToast(`${name} added to list.`);
+  };
 
   const addItemToInventory = async (item: Partial<InventoryItem>) => {
     const newItem: InventoryItem = {
@@ -202,16 +199,15 @@ const App: React.FC = () => {
             <h2 className="text-6xl font-black text-slate-900 tracking-tighter leading-none mb-4 uppercase">
               {currentView === 'dashboard' ? 'Overview.' : currentView === 'recipes' ? 'Kitchen.' : 'Inventory.'}
             </h2>
-            <p className="text-slate-500 font-medium text-lg italic">Intelligent logistics for your smart home.</p>
+            <p className="text-slate-500 font-medium text-lg italic">Organic logistics for your smart home.</p>
           </div>
         )}
 
         {currentView !== 'add-manual' && currentView !== 'scanner' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
             <StatCard label="Live Items" value={stats.totalItems} icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 7l-8-4-8 4"/></svg>} color="border-emerald-500" />
             <StatCard label="Expiring Soon" value={stats.expiringSoon} icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>} color="border-rose-400" />
             <StatCard label="Low Supply" value={stats.lowStock} icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 9v2"/></svg>} color="border-amber-400" />
-            <StatCard label="Kitchen Value" value={stats.inventoryValue} icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1v22M17 5H9.5"/></svg>} color="border-slate-300" isValueAnimated />
           </div>
         )}
 
@@ -220,26 +216,15 @@ const App: React.FC = () => {
             <div className="lg:col-span-8 space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <InventoryList items={inventory} />
-                <GroceryList items={groceryList} onToggle={(id) => setGroceryList(prev => prev.map(i => i.id === id ? { ...i, checked: !i.checked } : i))} />
+                <GroceryList 
+                  items={groceryList} 
+                  onToggle={(id) => setGroceryList(prev => prev.map(i => i.id === id ? { ...i, checked: !i.checked } : i))} 
+                  onAdd={addGroceryItem}
+                />
               </div>
+              <NutritionRequirements />
             </div>
             <div className="lg:col-span-4 space-y-8">
-              <Card className="p-8 bg-slate-900 text-white rounded-[3rem] shadow-2xl relative overflow-hidden group">
-                 <h4 className="text-xl font-bold mb-6 flex items-center gap-3">
-                   <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                   Stock Wealth
-                 </h4>
-                 <div className="mb-8">
-                    <div className="flex justify-between items-end mb-2">
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{stats.wealthStatus}</p>
-                      <p className="text-3xl font-black text-white">{stats.wealthScore}%</p>
-                    </div>
-                    <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden">
-                      <div className="h-full bg-emerald-500 transition-all duration-1000" style={{ width: `${stats.wealthScore}%` }}></div>
-                    </div>
-                 </div>
-                 <p className="text-xs font-medium text-slate-400 leading-relaxed">System monitoring active. Your current inventory provides optimal coverage for {profile.family_adults} adults.</p>
-              </Card>
               <RecipeSuggestions inventory={inventory} profile={profile} onRecipeSelect={setActiveRecipe} compact />
             </div>
           </div>
@@ -254,6 +239,7 @@ const App: React.FC = () => {
 
       {activeRecipe && <RecipeInstructions recipe={activeRecipe} onClose={() => setActiveRecipe(null)} />}
       <AIChat inventory={inventory} />
+      <VoiceChef inventory={inventory} />
       <QuickActions onAdd={() => setCurrentView('add-manual')} onScan={() => setCurrentView('scanner')} />
       <UserGuide isOpen={showGuide} onClose={() => setShowGuide(false)} />
       <Toast message={toast.message} isVisible={toast.visible} onClose={() => setToast(prev => ({ ...prev, visible: false }))} />

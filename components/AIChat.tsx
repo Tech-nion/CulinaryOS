@@ -12,7 +12,7 @@ interface AIChatProps {
 const AIChat: React.FC<AIChatProps> = ({ inventory }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<{role: 'user' | 'chef', text: string}[]>([
-    { role: 'chef', text: "Hello! I'm your CulinaryOS Assistant. I can help with recipes, inventory tracking, or nutrition advice. What's on the menu?" }
+    { role: 'chef', text: "Systems online. I'm your Culinary Assistant. How can I optimize your kitchen today?" }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -41,7 +41,7 @@ const AIChat: React.FC<AIChatProps> = ({ inventory }) => {
     <div className="fixed bottom-32 right-8 z-50">
       {isOpen ? (
         <Card className="w-80 md:w-96 h-[550px] flex flex-col p-0 shadow-2xl border-slate-200 overflow-hidden animate-in slide-in-from-bottom-8 duration-500 bg-white/95 backdrop-blur-3xl ring-8 ring-emerald-500/5">
-          <div className="p-6 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white flex justify-between items-center">
+          <div className="p-6 bg-emerald-600 text-white flex justify-between items-center">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-md">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2a10 10 0 1 0 10 10H12V2z"/></svg>
@@ -50,7 +50,7 @@ const AIChat: React.FC<AIChatProps> = ({ inventory }) => {
                 <p className="font-bold tracking-tight text-sm">Chef AI</p>
                 <div className="flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 bg-emerald-300 rounded-full animate-pulse"></div>
-                  <span className="text-[9px] font-bold text-emerald-100 uppercase tracking-widest">Connected</span>
+                  <span className="text-[9px] font-bold text-emerald-100 uppercase tracking-widest">Linked</span>
                 </div>
               </div>
             </div>
@@ -90,21 +90,22 @@ const AIChat: React.FC<AIChatProps> = ({ inventory }) => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Type message..."
+              placeholder="Ask the kitchen..."
               className="flex-1 bg-slate-50 rounded-xl px-5 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/10 border border-slate-200 focus:border-emerald-500/40"
             />
-            <Button size="icon" onClick={handleSend} disabled={isLoading} className="w-12 h-12 rounded-xl">
+            <Button size="icon" onClick={handleSend} disabled={isLoading} className="w-12 h-12 rounded-xl shadow-none">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
             </Button>
           </div>
         </Card>
       ) : (
         <button 
+          id="ai-chat-trigger"
           onClick={() => setIsOpen(true)}
           className="w-18 h-18 bg-emerald-600 text-white rounded-[2rem] flex items-center justify-center shadow-2xl hover:scale-110 hover:rotate-3 transition-all duration-300 relative group ring-8 ring-emerald-500/10"
         >
           <div className="absolute inset-0 bg-emerald-400/20 rounded-[2rem] animate-ping group-hover:hidden"></div>
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M9 10a1 1 0 1 1 2 0"/><path d="M13 10a1 1 0 1 1 2 0"/><path d="M9 15a3.5 3.5 0 0 0 6 0"/></svg>
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
         </button>
       )}
     </div>

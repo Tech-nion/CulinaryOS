@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { memo } from 'react';
 import { InventoryItem } from '../types';
 import { Card, CardHeader } from './ui/Card';
 import { Badge } from './ui/Badge';
@@ -10,7 +10,7 @@ interface InventoryListProps {
   items: InventoryItem[];
 }
 
-export const InventoryList: React.FC<InventoryListProps> = ({ items }) => {
+export const InventoryList: React.FC<InventoryListProps> = memo(({ items }) => {
   const getExpiryStatus = (date: string) => {
     const now = new Date();
     const expiry = new Date(date);
@@ -24,9 +24,9 @@ export const InventoryList: React.FC<InventoryListProps> = ({ items }) => {
   };
 
   const getStockStatus = (item: InventoryItem) => {
-    if (item.quantity <= item.minThreshold * 0.5) return 'bg-rose-500';
-    if (item.quantity <= item.minThreshold) return 'bg-amber-500';
-    return 'bg-orange-500';
+    if (item.quantity <= item.minThreshold * 0.5) return 'bg-rose-600';
+    if (item.quantity <= item.minThreshold) return 'bg-amber-600';
+    return 'bg-orange-600';
   };
 
   return (
@@ -43,21 +43,21 @@ export const InventoryList: React.FC<InventoryListProps> = ({ items }) => {
             <div key={item.id} className="group p-4 rounded-2xl hover:bg-orange-50/5 transition-colors border border-transparent hover:border-orange-500/20">
               <div className="flex items-center gap-4 mb-3">
                 <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-sm flex-shrink-0">
-                  <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                  <img src={item.image} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
-                    <h4 className="text-base font-bold text-white truncate">{item.name}</h4>
+                    <h4 className="text-base font-bold text-slate-900 truncate">{item.name}</h4>
                     <Badge variant={expiryStatus.variant}>{expiryStatus.label}</Badge>
                   </div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase">{item.category}</p>
+                  <p className="text-xs font-bold text-slate-600 uppercase">{item.category}</p>
                 </div>
               </div>
               
               <div className="space-y-2">
                 <div className="flex justify-between items-end">
-                  <span className="text-xs font-bold text-slate-400">Stock: {item.quantity}{item.unit}</span>
-                  <span className="text-xs font-semibold text-slate-500">Min: {item.minThreshold}{item.unit}</span>
+                  <span className="text-xs font-bold text-slate-600">Stock: {item.quantity}{item.unit}</span>
+                  <span className="text-xs font-bold text-slate-700">Min: {item.minThreshold}{item.unit}</span>
                 </div>
                 <Progress 
                   value={item.quantity} 
@@ -71,4 +71,4 @@ export const InventoryList: React.FC<InventoryListProps> = ({ items }) => {
       </div>
     </Card>
   );
-};
+});

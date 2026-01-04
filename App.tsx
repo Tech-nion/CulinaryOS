@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useTransition, memo } from 'react';
 import Header from './components/Header';
 import { StatCard } from './components/StatCard';
 import { InventoryList } from './components/InventoryList';
@@ -16,6 +16,7 @@ import { UserGuide } from './components/UserGuide';
 import { ManualAdd } from './components/ManualAdd';
 import { Scanner } from './components/Scanner';
 import { NutritionRequirements } from './components/NutritionRequirements';
+import RecipeDiscovery from './components/RecipeDiscovery';
 import { Badge } from './components/ui/Badge';
 import { Card } from './components/ui/Card';
 import { Button } from './components/ui/Button';
@@ -23,6 +24,10 @@ import { Toast } from './components/ui/Toast';
 import { INITIAL_INVENTORY, INITIAL_GROCERY_LIST } from './mockData';
 import { InventoryItem, GroceryItem, KitchenStats, Recipe, Profile, ViewState, Category } from './types';
 import { supabase } from './lib/supabase';
+
+// Memoized layout segments
+const MemoizedNutrition = memo(NutritionRequirements);
+const MemoizedQuickActions = memo(QuickActions);
 
 const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
@@ -32,6 +37,7 @@ const App: React.FC = () => {
   const [showGuide, setShowGuide] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [toast, setToast] = useState<{ visible: boolean; message: string }>({ visible: false, message: '' });
+  const [isPending, startTransition] = useTransition();
   const [profile, setProfile] = useState<Profile>({
     id: '',
     username: 'Chef',
@@ -45,9 +51,15 @@ const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewState>('dashboard');
   const [activeRecipe, setActiveRecipe] = useState<Recipe | null>(null);
 
-  const showToast = (message: string) => {
+  const showToast = useCallback((message: string) => {
     setToast({ visible: true, message });
-  };
+  }, []);
+
+  const setView = useCallback((view: ViewState) => {
+    startTransition(() => {
+      setCurrentView(view);
+    });
+  }, []);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -123,7 +135,7 @@ const App: React.FC = () => {
     };
   }, [inventory]);
 
-  const addGroceryItem = async (name: string, quantity: number, unit: string) => {
+  const addGroceryItem = useCallback(async (name: string, quantity: number, unit: string) => {
     const newItem: GroceryItem = {
       id: Math.random().toString(36).substr(2, 9),
       name,
@@ -142,9 +154,9 @@ const App: React.FC = () => {
       });
     }
     showToast(`${name} added to list.`);
-  };
+  }, [isDemo, session, isOnline, showToast]);
 
-  const addItemToInventory = async (item: Partial<InventoryItem>) => {
+  const addItemToInventory = useCallback(async (item: Partial<InventoryItem>) => {
     const newItem: InventoryItem = {
       id: Math.random().toString(36).substr(2, 9),
       name: item.name || 'New Item',
@@ -171,9 +183,9 @@ const App: React.FC = () => {
       });
     }
     showToast(`${newItem.name} logged successfully.`);
-  };
+  }, [isDemo, session, isOnline, showToast]);
 
-  const updateInventory = async (id: string, updates: Partial<InventoryItem>) => {
+  const updateInventory = useCallback(async (id: string, updates: Partial<InventoryItem>) => {
     setInventory(prev => prev.map(i => i.id === id ? { ...i, ...updates } : i));
     if (!isDemo && session && isOnline) {
       const dbUpdates: any = { ...updates };
@@ -182,47 +194,53 @@ const App: React.FC = () => {
       if (updates.minThreshold !== undefined) dbUpdates.min_threshold = updates.minThreshold;
       await supabase.from('inventory_items').update(dbUpdates).eq('id', id);
     }
-  };
+  }, [isDemo, session, isOnline]);
+
+  const onGroceryToggle = useCallback((id: string) => {
+    setGroceryList(prev => prev.map(i => i.id === id ? { ...i, checked: !i.checked } : i));
+  }, []);
 
   if (!isInitialized) return null;
   if (!session) return <Auth onDemoLogin={() => setIsDemo(true)} />;
 
   return (
-    <div className="min-h-screen pb-20 selection:bg-emerald-100 bg-[#f8fafc]">
-      <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-100/50 blur-[150px] rounded-full -z-10 animate-float"></div>
+    <div className={`min-h-screen pb-20 selection:bg-emerald-100 bg-[#f8fafc] ${isPending ? 'opacity-70 grayscale-[0.2]' : ''} transition-all duration-300`}>
+      <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-100/50 blur-[150px] rounded-full -z-10 animate-float" aria-hidden="true"></div>
       
-      <Header currentView={currentView} onViewChange={setCurrentView} />
+      <Header currentView={currentView} onViewChange={setView} />
       
       <main className="max-w-7xl mx-auto px-6 relative z-10">
         {currentView !== 'profile' && currentView !== 'add-manual' && currentView !== 'scanner' && (
           <div className="mb-12">
             <h2 className="text-6xl font-black text-slate-900 tracking-tighter leading-none mb-4 uppercase">
-              {currentView === 'dashboard' ? 'Overview.' : currentView === 'recipes' ? 'Kitchen.' : 'Inventory.'}
+              {currentView === 'dashboard' ? 'Overview.' : currentView === 'recipes' ? 'Kitchen.' : currentView === 'discovery' ? 'Discovery.' : 'Inventory.'}
             </h2>
-            <p className="text-slate-500 font-medium text-lg italic">Organic logistics for your smart home.</p>
+            <p className="text-slate-500 font-medium text-lg italic">
+              {currentView === 'discovery' ? 'Explore Global Culinary Patterns.' : 'Organic logistics for your smart home.'}
+            </p>
           </div>
         )}
 
         {currentView !== 'add-manual' && currentView !== 'scanner' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-            <StatCard label="Live Items" value={stats.totalItems} icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 7l-8-4-8 4"/></svg>} color="border-emerald-500" />
-            <StatCard label="Expiring Soon" value={stats.expiringSoon} icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>} color="border-rose-400" />
-            <StatCard label="Low Supply" value={stats.lowStock} icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 9v2"/></svg>} color="border-amber-400" />
+            <StatCard label="Live Items" value={stats.totalItems} icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M20 7l-8-4-8 4"/></svg>} color="border-emerald-500" />
+            <StatCard label="Expiring Soon" value={stats.expiringSoon} icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>} color="border-rose-400" />
+            <StatCard label="Low Supply" value={stats.lowStock} icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M12 9v2"/></svg>} color="border-amber-400" />
           </div>
         )}
 
         {currentView === 'dashboard' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in duration-300">
             <div className="lg:col-span-8 space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <InventoryList items={inventory} />
                 <GroceryList 
                   items={groceryList} 
-                  onToggle={(id) => setGroceryList(prev => prev.map(i => i.id === id ? { ...i, checked: !i.checked } : i))} 
+                  onToggle={onGroceryToggle} 
                   onAdd={addGroceryItem}
                 />
               </div>
-              <NutritionRequirements />
+              <MemoizedNutrition />
             </div>
             <div className="lg:col-span-4 space-y-8">
               <RecipeSuggestions inventory={inventory} profile={profile} onRecipeSelect={setActiveRecipe} compact />
@@ -230,17 +248,18 @@ const App: React.FC = () => {
           </div>
         )}
 
+        {currentView === 'discovery' && <RecipeDiscovery profile={profile} onRecipeSelect={setActiveRecipe} />}
         {currentView === 'recipes' && <RecipeSuggestions inventory={inventory} profile={profile} onRecipeSelect={setActiveRecipe} />}
-        {currentView === 'inventory' && <FullStock inventory={inventory} onUpdateTarget={(id, t) => updateInventory(id, { targetQuantity: t })} onUpdateQuantity={(id, q) => updateInventory(id, { quantity: q })} />}
-        {currentView === 'profile' && <ProfileView profile={profile} onUpdate={(p) => setProfile(p)} />}
-        {currentView === 'add-manual' && <ManualAdd onAdd={addItemToInventory} onClose={() => setCurrentView('dashboard')} />}
-        {currentView === 'scanner' && <Scanner onAdd={addItemToInventory} onClose={() => setCurrentView('dashboard')} />}
+        {currentView === 'inventory' && <FullStock inventory={inventory} onUpdateTarget={updateInventory} onUpdateQuantity={updateInventory} />}
+        {currentView === 'profile' && <ProfileView profile={profile} onUpdate={setProfile} />}
+        {currentView === 'add-manual' && <ManualAdd onAdd={addItemToInventory} onClose={() => setView('dashboard')} />}
+        {currentView === 'scanner' && <Scanner onAdd={addItemToInventory} onClose={() => setView('dashboard')} />}
       </main>
 
       {activeRecipe && <RecipeInstructions recipe={activeRecipe} onClose={() => setActiveRecipe(null)} />}
       <AIChat inventory={inventory} />
       <VoiceChef inventory={inventory} />
-      <QuickActions onAdd={() => setCurrentView('add-manual')} onScan={() => setCurrentView('scanner')} />
+      <MemoizedQuickActions onAdd={() => setView('add-manual')} onScan={() => setView('scanner')} />
       <UserGuide isOpen={showGuide} onClose={() => setShowGuide(false)} />
       <Toast message={toast.message} isVisible={toast.visible} onClose={() => setToast(prev => ({ ...prev, visible: false }))} />
     </div>

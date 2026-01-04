@@ -27,9 +27,9 @@ export const Card: React.FC<CardProps> = ({ children, className = '', onClick, h
 export const CardHeader: React.FC<{ title: string; subtitle?: string; icon?: React.ReactNode }> = ({ title, subtitle, icon }) => (
   <div className="flex items-center justify-between mb-8">
     <div>
-      <h3 className="text-xl font-bold text-white">{title}</h3>
-      {subtitle && <p className="text-xs text-slate-500 mt-1 font-medium">{subtitle}</p>}
+      <h3 className="text-xl font-bold text-slate-900">{title}</h3>
+      {subtitle && <p className="text-xs text-slate-600 mt-1 font-bold">{subtitle}</p>}
     </div>
-    {icon && <div className="p-3 bg-white/5 text-emerald-400 rounded-2xl border border-white/5">{icon}</div>}
+    {icon && <div className="p-3 bg-white/5 text-emerald-700 rounded-2xl border border-white/5">{icon}</div>}
   </div>
 );

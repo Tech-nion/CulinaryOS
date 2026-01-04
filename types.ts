@@ -86,4 +86,4 @@ export interface Mart {
 }
 
 export type OccasionType = 'Daily' | 'Weekend' | 'Party' | 'Festive';
-export type ViewState = 'dashboard' | 'recipes' | 'inventory' | 'profile' | 'shopping' | 'add-manual' | 'scanner';
+export type ViewState = 'dashboard' | 'recipes' | 'inventory' | 'profile' | 'shopping' | 'add-manual' | 'scanner' | 'discovery';

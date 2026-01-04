@@ -68,40 +68,57 @@ export const identifyItemFromImage = async (base64Image: string): Promise<Partia
 };
 
 /**
- * identifyIngredientsFromImage identifies multiple ingredients in a single photo for recipe generation.
+ * Search global recipes using Gemini 3 Flash with Google Search grounding.
  */
-export const identifyIngredientsFromImage = async (base64Image: string): Promise<string[]> => {
+export const searchGlobalRecipes = async (query: string, profile?: Profile | null): Promise<Recipe[]> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const prompt = `Analyze this image and list all food ingredients visible. Return ONLY a JSON array of strings representing the ingredient names.`;
+  const dietContext = profile ? `Context: User follows a ${profile.diet_preference} diet. Allergies: ${profile.allergies.join(', ')}.` : '';
+
+  const prompt = `Act as a global culinary researcher. Search for the recipe of: "${query}". 
+  Include authentic sweets, cakes, lunches, or juices if specified.
+  ${dietContext}
+  Use Google Search for authentic ingredients and instructions from local experts.
+  Return a JSON array of 3 recipe objects.
+  Properties: id, title, description, ingredients (array), steps (array of {number, instruction, duration?}), cookingTime, difficulty, matchPercentage (relative to user diet), calories, healthScore, nutrition ({protein, carbs, fats}), estimatedPrice.`;
 
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: [
-        {
-          parts: [
-            { text: prompt },
-            {
-              inlineData: {
-                mimeType: "image/jpeg",
-                data: base64Image
-              }
-            }
-          ]
-        }
-      ],
+      contents: prompt,
       config: {
+        tools: [{ googleSearch: {} }],
         responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: { type: Type.STRING }
-        }
       }
     });
-
     return JSON.parse(response.text || '[]');
   } catch (error) {
-    console.error("Gemini Multi-Vision Error:", error);
+    console.error("Global Search Error:", error);
+    return [];
+  }
+};
+
+/**
+ * Get popular dishes by country using Gemini 3 Flash and Google Search.
+ */
+export const getPopularDishesByCountry = async (country: string, profile?: Profile | null): Promise<Recipe[]> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const prompt = `Act as an international food critic. Find the top 5 most popular dishes from ${country}. 
+  Provide detailed recipes for them in a structured JSON format. 
+  Include lunches, desserts, and traditional beverages.
+  Return a JSON array of recipe objects.`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+      config: {
+        tools: [{ googleSearch: {} }],
+        responseMimeType: "application/json",
+      }
+    });
+    return JSON.parse(response.text || '[]');
+  } catch (error) {
+    console.error("Country Discovery Error:", error);
     return [];
   }
 };
@@ -128,9 +145,8 @@ export const getRecipeSuggestions = async (inventory: InventoryItem[] | string[]
   Available Ingredients: ${availableIngredients}. 
   Dietary Context: ${dietContext}
   
-  Suggest 3 creative recipes. Use Google Search to find current regional pricing estimations for any ingredients that are MISSING from the available list to complete these recipes.
-  Return ONLY a JSON array.
-  Include properties: id, title, description, ingredients (array), steps (array of {number, instruction, duration?}), cookingTime, difficulty, matchPercentage, calories, healthScore, estimatedPrice (a string showing estimated cost for missing items in local currency), nutrition ({protein, carbs, fats}).`;
+  Suggest 3 creative recipes. Use Google Search to find current regional pricing estimations for any ingredients that are MISSING from the available list.
+  Return ONLY a JSON array.`;
 
   try {
     const response = await ai.models.generateContent({
@@ -139,44 +155,6 @@ export const getRecipeSuggestions = async (inventory: InventoryItem[] | string[]
       config: {
         tools: [{ googleSearch: {} }],
         responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              id: { type: Type.STRING },
-              title: { type: Type.STRING },
-              description: { type: Type.STRING },
-              ingredients: { type: Type.ARRAY, items: { type: Type.STRING } },
-              steps: { 
-                type: Type.ARRAY, 
-                items: { 
-                  type: Type.OBJECT, 
-                  properties: { 
-                    number: { type: Type.NUMBER }, 
-                    instruction: { type: Type.STRING },
-                    duration: { type: Type.STRING }
-                  } 
-                } 
-              },
-              cookingTime: { type: Type.STRING },
-              difficulty: { type: Type.STRING },
-              matchPercentage: { type: Type.NUMBER },
-              calories: { type: Type.NUMBER },
-              healthScore: { type: Type.NUMBER },
-              estimatedPrice: { type: Type.STRING },
-              nutrition: {
-                type: Type.OBJECT,
-                properties: {
-                  protein: { type: Type.STRING },
-                  carbs: { type: Type.STRING },
-                  fats: { type: Type.STRING }
-                }
-              }
-            },
-            required: ["id", "title", "steps", "nutrition", "estimatedPrice"]
-          }
-        }
       }
     });
 
@@ -187,31 +165,42 @@ export const getRecipeSuggestions = async (inventory: InventoryItem[] | string[]
   }
 };
 
+/**
+ * getRelatedRecipes finds variations or similar recipes based on a set of ingredients.
+ * This function resolves the missing export error in RecipeInstructions.tsx.
+ */
 export const getRelatedRecipes = async (ingredients: string[]): Promise<Recipe[]> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const prompt = `Based on these primary ingredients: ${ingredients.join(', ')}, suggest 2 creative alternative recipe "remixes". 
-  Return ONLY a JSON array of recipe objects.`;
+  const ingredientsStr = ingredients.join(', ');
+  
+  const prompt = `Act as a creative chef. Suggest 3 recipes that are related to or remixes of a dish containing these ingredients: ${ingredientsStr}.
+  Use Google Search to find trendy variations or authentic regional alternatives that match these base ingredients.
+  Return ONLY a JSON array of 3 recipe objects.
+  Properties: id, title, description, ingredients (array), steps (array of {number, instruction, duration?}), cookingTime, difficulty, matchPercentage, calories, healthScore, nutrition ({protein, carbs, fats}), estimatedPrice.`;
 
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: prompt,
       config: {
+        tools: [{ googleSearch: {} }],
         responseMimeType: "application/json",
       }
     });
     return JSON.parse(response.text || '[]');
   } catch (error) {
-    console.error("Gemini Related Recipe Error:", error);
+    console.error("Related Recipes Error:", error);
     return [];
   }
 };
 
+/**
+ * chatWithChef provides a conversational interface for kitchen assistance.
+ */
 export const chatWithChef = async (message: string, inventory: InventoryItem[]): Promise<string> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const inventoryContext = inventory.map(item => `${item.name} (${item.quantity} ${item.unit})`).join(', ');
-  
-  const systemInstruction = `You are "Chef AI". Access to inventory: ${inventoryContext}. Be helpful and concise. Focus on using ingredients near expiry.`;
+  const systemInstruction = `You are "Chef AI". Access to inventory: ${inventoryContext}. Be helpful and concise.`;
 
   try {
     const response = await ai.models.generateContent({
@@ -221,16 +210,19 @@ export const chatWithChef = async (message: string, inventory: InventoryItem[]):
     });
     return response.text || "I'm sorry, I couldn't process that.";
   } catch (error) {
-    return "The kitchen AI is currently recalibrating. Please try again.";
+    return "The kitchen AI is recalibrating. Try again.";
   }
 };
 
+/**
+ * findNearbyMarts uses Gemini 2.5 Flash with Google Maps grounding to find local grocery nodes.
+ */
 export const findNearbyMarts = async (latitude: number, longitude: number): Promise<Mart[]> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      contents: "Find 3 grocery stores or supermarkets near my current location for food shopping.",
+      contents: "Find 3 grocery stores or supermarkets near my location.",
       config: {
         tools: [{ googleMaps: {} }],
         toolConfig: {

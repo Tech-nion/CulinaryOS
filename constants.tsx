@@ -2,12 +2,12 @@
 import React from 'react';
 
 export const COLORS = {
-  primary: 'emerald-600',
+  primary: 'emerald-700',
   primaryLight: 'emerald-50',
-  secondary: 'amber-500',
+  secondary: 'amber-700',
   secondaryLight: 'amber-50',
-  text: 'slate-800',
-  muted: 'slate-500',
+  text: 'slate-900',
+  muted: 'slate-600',
   border: 'slate-200'
 };
 

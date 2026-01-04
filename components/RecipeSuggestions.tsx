@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback, memo } from 'react';
 import { Recipe, InventoryItem, Profile } from '../types';
 import { getRecipeSuggestions, identifyItemFromImage, chatWithChef } from '../services/geminiService';
 import { Card } from './ui/Card';
@@ -26,27 +26,32 @@ export const RecipeSuggestions: React.FC<RecipeSuggestionsProps> = ({ inventory,
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  const fetchRecipes = async (ingredientsOverride?: string[]) => {
+  const fetchRecipes = useCallback(async (ingredientsOverride?: string[]) => {
     setIsLoading(true);
     setVisionError(null);
-    const data = await getRecipeSuggestions(ingredientsOverride || inventory, profile);
-    setRecipes(data);
-    if (data.length > 0) {
-      setSelectedRecipe(data[0]);
+    try {
+      const data = await getRecipeSuggestions(ingredientsOverride || inventory, profile);
+      setRecipes(data);
+      if (data.length > 0 && !selectedRecipe) {
+        setSelectedRecipe(data[0]);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoading(false);
+      setIsVisionMode(!!ingredientsOverride);
     }
-    setIsLoading(false);
-    setIsVisionMode(!!ingredientsOverride);
-  };
+  }, [inventory, profile, selectedRecipe]);
 
   useEffect(() => {
     fetchRecipes();
-  }, [profile?.diet_preference, profile?.allergies]);
+  }, [profile?.diet_preference, profile?.allergies, fetchRecipes]);
 
   useEffect(() => {
-    if (chatEndRef.current) {
+    if (chatEndRef.current && isChatOpen) {
       chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [chatMessages]);
+  }, [chatMessages, isChatOpen]);
 
   const handleVisionSearch = () => {
     fileInputRef.current?.click();
@@ -103,6 +108,13 @@ export const RecipeSuggestions: React.FC<RecipeSuggestionsProps> = ({ inventory,
     handleSendMessage(prompt);
   };
 
+  const handleConsultClick = useCallback(() => {
+    // Avoid document.getElementById for better performance and reactivity
+    // We can handle the chat opening logic here directly or via a shared parent state
+    // For now, trigger a click but keep logic light
+    document.getElementById('ai-chat-trigger')?.click();
+  }, []);
+
   if (compact) {
     return (
       <Card className="bg-white/5 border-white/5 shadow-none p-6 relative overflow-hidden group">
@@ -134,10 +146,8 @@ export const RecipeSuggestions: React.FC<RecipeSuggestionsProps> = ({ inventory,
         </div>
 
         <button 
-          onClick={() => {
-            const chatBtn = document.getElementById('ai-chat-trigger');
-            chatBtn?.click();
-          }}
+          onClick={handleConsultClick}
+          aria-label="Open Chef AI Chat"
           className="w-full py-4 bg-emerald-600/20 border border-emerald-500/30 rounded-2xl text-[10px] font-black text-emerald-400 uppercase tracking-widest hover:bg-emerald-600/30 transition-all flex items-center justify-center gap-2"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
@@ -148,7 +158,7 @@ export const RecipeSuggestions: React.FC<RecipeSuggestionsProps> = ({ inventory,
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in duration-700 relative">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 relative">
       {/* AI Chat Layer */}
       {isChatOpen && (
         <div className="absolute inset-0 z-50 bg-[#f8fafc]/90 backdrop-blur-xl rounded-[3rem] p-8 flex flex-col border border-emerald-500/10 shadow-3xl animate-in zoom-in-95 duration-300">
@@ -162,7 +172,7 @@ export const RecipeSuggestions: React.FC<RecipeSuggestionsProps> = ({ inventory,
                 <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Neural Link Established</p>
               </div>
             </div>
-            <button onClick={() => setIsChatOpen(false)} className="p-3 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors">
+            <button onClick={() => setIsChatOpen(false)} className="p-3 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors" aria-label="Close Chat">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </button>
           </div>
@@ -176,7 +186,7 @@ export const RecipeSuggestions: React.FC<RecipeSuggestionsProps> = ({ inventory,
               </div>
             )}
             {chatMessages.map((m, i) => (
-              <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in`}>
                 <div className={`max-w-[80%] p-4 rounded-2xl text-sm font-medium ${
                   m.role === 'user' 
                   ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20' 
@@ -204,9 +214,10 @@ export const RecipeSuggestions: React.FC<RecipeSuggestionsProps> = ({ inventory,
               onChange={(e) => setChatInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
               placeholder="Query the Chef..."
+              aria-label="Chef query input"
               className="flex-1 bg-slate-100 border-none rounded-2xl px-6 py-4 text-sm font-bold outline-none focus:ring-4 focus:ring-emerald-500/5 transition-all"
             />
-            <Button onClick={() => handleSendMessage()} className="px-8 shadow-emerald-500/20">
+            <Button onClick={() => handleSendMessage()} aria-label="Submit query" className="px-8 shadow-emerald-500/20">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
             </Button>
           </div>
@@ -234,6 +245,7 @@ export const RecipeSuggestions: React.FC<RecipeSuggestionsProps> = ({ inventory,
               onClick={handleVisionSearch}
               className="text-white/40 hover:text-amber-400 p-2 transition-colors"
               title="Search by Photo"
+              aria-label="Search by Photo"
             >
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
             </button>
@@ -241,6 +253,7 @@ export const RecipeSuggestions: React.FC<RecipeSuggestionsProps> = ({ inventory,
               onClick={() => setIsChatOpen(true)}
               className="text-white/40 hover:text-emerald-400 p-2 transition-colors"
               title="Consult AI"
+              aria-label="Consult AI Chat"
             >
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             </button>
@@ -248,6 +261,7 @@ export const RecipeSuggestions: React.FC<RecipeSuggestionsProps> = ({ inventory,
               onClick={() => { setIsVisionMode(false); fetchRecipes(); }} 
               disabled={isLoading}
               className="text-white/40 hover:text-emerald-400 p-2 transition-colors disabled:opacity-50"
+              aria-label="Refresh recipes"
             >
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={isLoading ? 'animate-spin' : ''}><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
             </button>

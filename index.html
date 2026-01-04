@@ -3,10 +3,21 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CulinaryOS - Smart Kitchen Hub</title>
   
-  <!-- PWA & SEO Meta -->
+  <!-- SEO & Social Meta -->
+  <meta name="description" content="Premium IoT kitchen inventory and AI recipe platform for modern smart homes.">
+  <meta property="og:title" content="CulinaryOS - Global Kitchen Intelligence">
+  <meta property="og:description" content="Manage your inventory, find Michelin-star recipes based on expiring items, and explore global cuisines with Gemini AI.">
+  <meta property="og:image" content="https://api.dicebear.com/7.x/initials/svg?seed=COS&backgroundColor=10b981">
+  <meta property="og:site_name" content="CulinaryOS Hub">
+  <meta property="og:url" content="https://culinary-os.kitchen">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="CulinaryOS - Smart Kitchen Hub">
+  <meta name="twitter:description" content="AI-powered inventory and recipe discovery platform.">
+  <meta name="twitter:image" content="https://api.dicebear.com/7.x/initials/svg?seed=COS&backgroundColor=10b981">
+
   <meta name="theme-color" content="#f8fafc">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -24,7 +35,7 @@
 
     body {
       font-family: var(--font-body);
-      background: #f8fafc; /* Airy light background */
+      background: #f8fafc;
       min-height: 100vh;
       color: #1e293b;
       overflow-x: hidden;
@@ -59,16 +70,16 @@
 
     .perspective-card {
       transform-style: preserve-3d;
-      transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
     .perspective-card:hover {
-      transform: translateY(-5px) scale(1.02);
+      transform: translateY(-5px) scale(1.01);
     }
 
     @keyframes float {
       0% { transform: translateY(0px); }
-      50% { transform: translateY(-10px); }
+      50% { transform: translateY(-5px); }
       100% { transform: translateY(0px); }
     }
 
@@ -92,7 +103,6 @@
     button, input, select, textarea {
       border-radius: 1rem !important;
       font-family: var(--font-body);
-      transition: all 0.2s ease;
     }
 
     .rounded-\[2\.5rem\] { border-radius: 2.5rem !important; }
@@ -103,13 +113,14 @@
       color: #ffffff;
     }
 
-    .glow-green {
-      box-shadow: 0 0 30px rgba(16, 185, 129, 0.15);
-    }
-
     @media (max-width: 640px) {
       h1 { font-size: 2.5rem !important; }
       body { font-size: 16px; }
+    }
+
+    /* Reduce render overhead for animations */
+    .animate-in {
+      animation-duration: 0.3s !important;
     }
   </style>
 <script type="importmap">

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, memo, useCallback } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
 import { InventoryItem } from '../types';
 import { Card } from './ui/Card';
@@ -9,7 +9,7 @@ interface VoiceChefProps {
   inventory: InventoryItem[];
 }
 
-export const VoiceChef: React.FC<VoiceChefProps> = ({ inventory }) => {
+export const VoiceChef: React.FC<VoiceChefProps> = memo(({ inventory }) => {
   const [isActive, setIsActive] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [transcript, setTranscript] = useState('');
@@ -51,6 +51,16 @@ export const VoiceChef: React.FC<VoiceChefProps> = ({ inventory }) => {
     }
     return buffer;
   }
+
+  const stopSession = useCallback(() => {
+    setIsActive(false);
+    setStatus('idle');
+    setTranscript('');
+    if (audioContextRef.current) audioContextRef.current.close();
+    if (outputAudioContextRef.current) outputAudioContextRef.current.close();
+    sourcesRef.current.forEach(s => { try { s.stop(); } catch(e) {} });
+    sourcesRef.current.clear();
+  }, []);
 
   const startSession = async () => {
     setIsConnecting(true);
@@ -105,7 +115,7 @@ export const VoiceChef: React.FC<VoiceChefProps> = ({ inventory }) => {
               sourcesRef.current.add(source);
             }
             if (message.serverContent?.interrupted) {
-              sourcesRef.current.forEach(s => s.stop());
+              sourcesRef.current.forEach(s => { try { s.stop(); } catch(e) {} });
               sourcesRef.current.clear();
               nextStartTimeRef.current = 0;
               setStatus('listening');
@@ -115,12 +125,22 @@ export const VoiceChef: React.FC<VoiceChefProps> = ({ inventory }) => {
             }
           },
           onclose: () => stopSession(),
-          onerror: (e) => console.error("Live Audio Error:", e),
+          onerror: (e) => { console.error("Live Audio Error:", e); stopSession(); },
         },
         config: {
           responseModalities: [Modality.AUDIO],
-          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } } },
-          systemInstruction: `You are the Voice Chef of CulinaryOS. You have access to this inventory: ${inventoryContext}. Help users cook, suggest recipes, and answer kitchen questions in a friendly, concise manner.`,
+          speechConfig: { 
+            voiceConfig: { 
+              prebuiltVoiceConfig: { voiceName: 'Kore' }
+            } 
+          },
+          systemInstruction: `You are the Female Voice Assistant for CulinaryOS. You are a helpful, encouraging, and intelligent kitchen guide. 
+          Current Inventory: ${inventoryContext}.
+          Your primary tasks:
+          1. Provide real-time step-by-step recipe guidance.
+          2. Answer questions about ingredient substitutions and cooking techniques.
+          3. Inform the user about items nearing expiry.
+          Keep your responses concise, friendly, and focused on cooking safety and efficiency.`,
           outputAudioTranscription: {},
         }
       });
@@ -131,20 +151,10 @@ export const VoiceChef: React.FC<VoiceChefProps> = ({ inventory }) => {
     }
   };
 
-  const stopSession = () => {
-    setIsActive(false);
-    setStatus('idle');
-    setTranscript('');
-    if (audioContextRef.current) audioContextRef.current.close();
-    if (outputAudioContextRef.current) outputAudioContextRef.current.close();
-    sourcesRef.current.forEach(s => s.stop());
-    sourcesRef.current.clear();
-  };
-
   return (
     <div className="fixed bottom-32 left-8 z-50">
       {isActive ? (
-        <Card className="w-80 p-6 shadow-2xl bg-slate-900 border-emerald-500/30 animate-in zoom-in-95 duration-300 ring-8 ring-emerald-500/5">
+        <Card className="w-80 p-6 shadow-2xl bg-[#0f172a] border-emerald-500/30 animate-in zoom-in-95 duration-300 ring-8 ring-emerald-500/5">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <div className="relative">
@@ -158,11 +168,11 @@ export const VoiceChef: React.FC<VoiceChefProps> = ({ inventory }) => {
                 )}
               </div>
               <div>
-                <p className="text-sm font-bold text-white uppercase tracking-tight">Voice Chef</p>
-                <Badge variant="success" className="text-[8px] py-0 px-1">{status.toUpperCase()}</Badge>
+                <p className="text-sm font-bold text-white uppercase tracking-tight">AI Voice Assistant</p>
+                <Badge variant="success" className="text-[8px] py-0 px-1 bg-emerald-500/20 text-emerald-400 border-none">{status.toUpperCase()}</Badge>
               </div>
             </div>
-            <button onClick={stopSession} className="text-slate-500 hover:text-white transition-colors">
+            <button onClick={stopSession} className="text-slate-500 hover:text-white transition-colors" aria-label="Close Voice Assistant">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </button>
           </div>
@@ -181,7 +191,7 @@ export const VoiceChef: React.FC<VoiceChefProps> = ({ inventory }) => {
                 ))}
              </div>
              <p className="text-[10px] text-slate-400 font-medium italic text-center line-clamp-2">
-               {transcript || "Ask about dinner, substitutes, or your stock..."}
+               {transcript || "Ask for a recipe or inventory status..."}
              </p>
           </div>
         </Card>
@@ -189,7 +199,8 @@ export const VoiceChef: React.FC<VoiceChefProps> = ({ inventory }) => {
         <button 
           onClick={startSession}
           disabled={isConnecting}
-          className="w-18 h-18 bg-emerald-600 text-white rounded-[2rem] flex items-center justify-center shadow-2xl hover:scale-110 hover:rotate-3 transition-all duration-300 ring-8 ring-emerald-500/10 group overflow-hidden"
+          aria-label="Start Gemini AI Voice Assistant"
+          className="w-18 h-18 bg-[#0f172a] text-emerald-500 border border-emerald-500/30 rounded-[2rem] flex items-center justify-center shadow-2xl hover:scale-110 hover:rotate-3 transition-all duration-300 ring-8 ring-emerald-500/10 group overflow-hidden"
         >
           {isConnecting ? (
             <svg className="animate-spin h-6 w-6" viewBox="0 0 24 24">
@@ -198,7 +209,7 @@ export const VoiceChef: React.FC<VoiceChefProps> = ({ inventory }) => {
             </svg>
           ) : (
             <>
-              <div className="absolute inset-0 bg-emerald-400/20 rounded-[2rem] animate-ping group-hover:hidden"></div>
+              <div className="absolute inset-0 bg-emerald-400/10 rounded-[2rem] animate-ping group-hover:hidden"></div>
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
               </svg>
@@ -208,4 +219,4 @@ export const VoiceChef: React.FC<VoiceChefProps> = ({ inventory }) => {
       )}
     </div>
   );
-};
+});

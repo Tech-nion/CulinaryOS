@@ -1,5 +1,5 @@
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, memo } from 'react';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import { identifyItemFromImage } from '../services/geminiService';
@@ -10,7 +10,7 @@ interface ScannerProps {
   onClose: () => void;
 }
 
-export const Scanner: React.FC<ScannerProps> = ({ onAdd, onClose }) => {
+export const Scanner: React.FC<ScannerProps> = memo(({ onAdd, onClose }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -70,7 +70,7 @@ export const Scanner: React.FC<ScannerProps> = ({ onAdd, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black flex flex-col animate-in fade-in duration-500 overflow-hidden">
+    <div className="fixed inset-0 z-[100] bg-black flex flex-col animate-in fade-in duration-300 overflow-hidden">
       {/* HUD Elements */}
       <div className="absolute top-8 left-8 right-8 flex justify-between items-start z-[110]">
         <div className="space-y-2">
@@ -81,9 +81,10 @@ export const Scanner: React.FC<ScannerProps> = ({ onAdd, onClose }) => {
         </div>
         <button 
           onClick={onClose}
+          aria-label="Exit Scanner"
           className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-xl flex items-center justify-center text-white hover:bg-white/20 transition-all border border-white/10"
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
         </button>
       </div>
 
@@ -130,13 +131,14 @@ export const Scanner: React.FC<ScannerProps> = ({ onAdd, onClose }) => {
         )}
         
         <div className="flex items-center gap-16">
-          <button className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-slate-500 hover:text-white transition-colors">
-             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+          <button aria-label="Toggle Flash" className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-slate-500 hover:text-white transition-colors">
+             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
           </button>
           
           <button 
             disabled={isProcessing}
             onClick={handleCapture}
+            aria-label="Capture food item"
             className="w-24 h-24 rounded-full bg-white p-2 shadow-[0_0_50px_rgba(255,255,255,0.2)] hover:scale-110 active:scale-90 transition-all disabled:opacity-50 group"
           >
             <div className="w-full h-full rounded-full border-4 border-slate-900 flex items-center justify-center">
@@ -144,8 +146,8 @@ export const Scanner: React.FC<ScannerProps> = ({ onAdd, onClose }) => {
             </div>
           </button>
 
-          <button className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-slate-500 hover:text-white transition-colors">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          <button aria-label="Manual Entry" onClick={onClose} className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-slate-500 hover:text-white transition-colors">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>
         </div>
         <p className="text-slate-600 text-[10px] font-bold uppercase tracking-[0.3em] mt-8">Align item label within reticle for best results</p>
@@ -161,9 +163,9 @@ export const Scanner: React.FC<ScannerProps> = ({ onAdd, onClose }) => {
           100% { top: 90%; opacity: 0; }
         }
         .animate-scan {
-          animation: scan 2.5s ease-in-out infinite;
+          animation: scan 2s ease-in-out infinite;
         }
       `}</style>
     </div>
   );
-};
+});

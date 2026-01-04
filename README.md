@@ -1,4 +1,4 @@
-**🍳 CulinaryOS – Intelligent IoT Kitchen Platform**
+### 🍳 CulinaryOS – Intelligent IoT Kitchen Platform
 
 CulinaryOS is a high-performance, premium IoT kitchen platform that bridges the gap between physical grocery management and intelligent meal planning. It’s designed to function as a Smart Home OS, not just a list app, offering AI-powered inventory management, recipe generation, and smart cooking guidance.
 
@@ -41,7 +41,7 @@ Customize AI with dietary restrictions (Vegan, Keto, etc.)
 
 Allergies and preferences passed to AI for recipe suggestions
 
-**🧠 AI Features & APIs:**
+##🧠 AI Features & APIs:
 Feature	Model	Purpose
 Smart Scanning	gemini-3-flash-preview	Converts food images into structured data
 Recipe Synthesis	gemini-3-flash-preview	Suggests recipes and checks ingredient prices

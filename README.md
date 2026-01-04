@@ -1,12 +1,90 @@
-CulinaryOS is a high-performance, premium IoT kitchen platform designed to bridge the gap between physical grocery management and intelligent meal planning. As a senior engineer, I’ve architected this system to feel like a "Smart Home OS" rather than a simple list app. Here is a breakdown of the terminology, tech stack, and engineering choices used in the application.
+**🍳 CulinaryOS – Intelligent IoT Kitchen Platform**
 
-The Tech Stack Frontend Core: React 19 with TypeScript. We use functional components and hooks (useMemo, useEffect) to ensure smooth performance during heavy AI data processing. Styling: Tailwind CSS. The interface uses a "Glassmorphism" aesthetic (translucent cards, heavy blurs) to mimic modern IoT interfaces like Apple Home or Nest. Backend & Auth: Supabase. PostgreSQL: Handles inventory and profiles. Row Level Security (RLS): Ensures your "Kitchen Node" is private and only accessible to you. Real-time engine: Automatically syncs inventory across multiple devices (e.g., scan on your phone, see it on your tablet). Intelligence Engine: Google Gemini API. Gemini 3 Flash: Used for high-speed Vision (scanning) and Chat. Gemini 2.5 Flash: Used for Location Grounding (finding stores). PWA (Progressive Web App): Includes a Service Worker (sw.js) and Manifest for "Install to Home Screen" support, making it feel like a native mobile app.
-Core Terminology & Concepts To give the app a premium, professional feel, we use specific terminology: Registry: The master database of your physical food items. AI Studio: The laboratory where Gemini analyzes your registry to synthesize recipe strategies. Neural Scan: The computer-vision protocol that uses your camera to identify physical items. Stock Wealth: A proprietary algorithm that calculates the monetary and nutritional value of your current stock. Biometric Impact: The nutritional breakdown (Kcal, Macros) and "Health Score" of a suggested recipe. Grounding: The process of connecting AI answers to real-world data (like current prices or store locations).
-Page & Module Breakdown A. Dashboard (The Command Center) Function: Provides a "Snapshot" of your kitchen's health. Key UI: Stat Cards with animated value counters and the "Stock Wealth" progress ring. Logic: High-level summaries of expiring items and low-stock alerts. B. Stock Hub / Registry (Inventory Management) Function: Full CRUD (Create, Read, Update, Delete) management of food. Features: Scalable "Occasion Multipliers." If you set the occasion to "Party," the app automatically recalculates your target stock levels and flags items as "Low" based on the higher demand. C. AI Studio (Recipe Generation) Function: Suggests meals based on what you actually have. AI Logic: It prioritize items nearing their Expiry Date to reduce food waste. Grounding: Uses Google Search to check regional prices for missing ingredients so you know exactly what a meal will cost before you shop. D. Vision Protocol (The Scanner) Function: Hands-free entry. Logic: Uses a raw media stream. When you capture a frame, it is sent as a base64 string to Gemini 3 Flash. The AI returns JSON containing the item name, category, and estimated shelf life. E. Settings (Identity Module) Function: Customizes the AI's "Neural Parameters." Logic: Updates your dietary restrictions (Vegan, Keto, etc.) and allergies. These are passed as System Instructions to Gemini in every recipe request.
-Key AI Features & APIs Feature Model Used API Purpose Smart Scanning gemini-3-flash-preview Vision: Converts a photo of a tomato into a structured data object. Recipe Synthesis gemini-3-flash-preview Search Grounding: Finds recipes and searches the web for current ingredient prices. Nearby Marts gemini-2.5-flash Maps Grounding: Takes your GPS coordinates and finds real supermarkets near you. Chef AI Chat gemini-3-flash-preview Conversational: Acts as a consultant for cooking tips and inventory questions.
-Advanced Logistics Auto-Grocery List: When Registry items fall below the MinThreshold, they are automatically injected into the Grocery List using Supabase triggers/logic. Step-by-Step Execution: When you start a recipe, the app enters a "Focus Mode" (RecipeInstructions.tsx) with a progress bar and duration timers for each phase. This architecture ensures that CulinaryOS isn't just a list—it's an intelligent assistant that understands the value, location, and expiration of everything in your kitchen.
+CulinaryOS is a high-performance, premium IoT kitchen platform that bridges the gap between physical grocery management and intelligent meal planning. It’s designed to function as a Smart Home OS, not just a list app, offering AI-powered inventory management, recipe generation, and smart cooking guidance.
 
-View your app in AI Studio: https://ai.studio/apps/drive/10NEsqShE--u8F-7m_jb76SaMNmJW4vM2
+**✨ Features**
+Dashboard (Command Center)
+
+Snapshot of your kitchen’s health
+
+Expiring items & low-stock alerts
+
+Animated Stat Cards & Stock Wealth progress ring
+
+Stock Hub / Registry (Inventory Management)
+
+Full CRUD for pantry items
+
+Dynamic stock targets with Occasion Multipliers
+
+Low-stock notifications
+
+AI Studio (Recipe Generation)
+
+Suggests meals based on your current inventory
+
+Prioritizes items near expiration to reduce waste
+
+Checks real-time ingredient prices via web grounding
+
+Vision Protocol (Scanner)
+
+Hands-free item entry using camera
+
+Converts images to structured JSON via Gemini 3 Flash
+
+Captures name, category, and shelf-life estimates
+
+Settings (Identity Module)
+
+Customize AI with dietary restrictions (Vegan, Keto, etc.)
+
+Allergies and preferences passed to AI for recipe suggestions
+
+**🧠 AI Features & APIs:**
+Feature	Model	Purpose
+Smart Scanning	gemini-3-flash-preview	Converts food images into structured data
+Recipe Synthesis	gemini-3-flash-preview	Suggests recipes and checks ingredient prices
+Nearby Marts	gemini-2.5-flash	Finds supermarkets using GPS
+Chef AI Chat	gemini-3-flash-preview	Conversational assistant for cooking & inventory
+⚡ Advanced Logistics
+
+Auto-Grocery List: Low-stock items automatically added using Supabase triggers
+
+Step-by-Step Execution: Recipe Focus Mode with progress bars and timers for each step
+
+**🛠 Tech Stack:**
+
+Frontend: React 19 + TypeScript, Tailwind CSS, Glassmorphism UI
+
+Backend & Auth: Supabase + PostgreSQL, Row-Level Security
+
+Real-Time Sync: Multi-device inventory updates
+
+Intelligence Engine: Google Gemini API (Gemini 3 Flash & Gemini 2.5 Flash)
+
+PWA Support: Service Worker + Manifest for installable web app
+
+**📌 Core Terminology:**
+
+Registry: Master database of physical food items
+
+AI Studio: Laboratory for AI-powered recipe strategies
+
+Neural Scan: Vision-based item identification
+
+Stock Wealth: Monetary & nutritional value algorithm
+
+Biometric Impact: Health Score & nutritional breakdown
+
+Grounding: Linking AI outputs to real-world data (prices, locations)
+
+**💡 Conclusion:**
+
+CulinaryOS is more than a kitchen app—it’s an intelligent assistant that understands the value, location, and expiration of every item in your kitchen, helping you cook smarter, reduce waste, and plan meals efficiently.
+
+I can also make a GitHub-ready version with badges, screenshots, and collapsible sections so your README looks professional and eye-catching.
+
 
 ## Run Locally
 
